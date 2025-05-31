@@ -2,24 +2,28 @@
 apiVersion: resource.k8s.io/v1beta1
 kind: ResourceClaimTemplate
 metadata:
-  name: macvlan-eth1-attachment
+  name: macvlan-enp0s10-attachment-b
+  labels:
+    app: demo-b
 spec:
   spec:
     devices:
       requests:
-      - name: macvlan-eth1
+      - name: macvlan-enp0s10
         deviceClassName: cni.networking.x-k8s.io
         allocationMode: ExactCount
-        adminAccess: true # Required since the device selected should not be clained but instead utilized to create the macvlan.
         count: 1
+        capacities:
+          requests:
+            bandwidth: 5Gi
         selectors:
         - cel:
             expression: device.driver == "cni.dra.networking.x-k8s.io"
         - cel:
-            expression: device.attributes["cni.dra.networking.x-k8s.io"].name == "eth1"
+            expression: device.attributes["cni.dra.networking.x-k8s.io"].name == "enp0s10"
       config:
       - requests:
-        - macvlan-eth1
+        - macvlan-enp0s10
         opaque:
           driver: cni.dra.networking.x-k8s.io
           parameters: # CNIParameters with the GVK, interface name and CNI Config (in YAML format).
@@ -28,10 +32,10 @@ spec:
             ifName: "net1"
             config:
               cniVersion: 1.0.0
-              name: macvlan-eth1
+              name: macvlan-enp0s10
               plugins:
               - type: macvlan
-                master: eth1
+                master: enp0s10
                 mode: bridge
                 ipam:
                   type: host-local
@@ -41,18 +45,18 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: demo-application
+  name: demo-b
   labels:
-    app: demo-application
+    app: demo-b
 spec:
-  replicas: 15
+  replicas: 3
   selector:
     matchLabels:
-      app: demo-application
+      app: demo-b
   template:
     metadata:
       labels:
-        app: demo-application
+        app: demo-b
     spec:
       containers:
       - name: alpine
@@ -62,5 +66,5 @@ spec:
         - sleep
         - infinity
       resourceClaims:
-      - name: macvlan-eth1-attachment
-        resourceClaimTemplateName: macvlan-eth1-attachment
+      - name: macvlan-enp0s10-attachment-b
+        resourceClaimTemplateName: macvlan-enp0s10-attachment-b

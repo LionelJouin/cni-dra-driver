@@ -17,8 +17,10 @@ Create and prepare a local Kubernetes cluster using Kind:
 kind create cluster --config docs/demo/kind-config.yaml
 # Install CNI Plugins.
 kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/e2e/templates/cni-install.yml.j2
-# Create a eth1 on kind-worker.
-docker exec -it kind-worker ip link add eth1 link eth0 type macvlan mode bridge
+# Create a enp0s10 on kind-worker.
+docker exec -it kind-worker ip link add enp0s10 link eth0 type macvlan mode bridge
+# Create a enp0s10 on kind-worker2.
+docker exec -it kind-worker2 ip link add enp0s10 link eth0 type macvlan mode bridge
 # Deploy the CNI-DRA-Driver.
 kubectl apply -k ./deployments/cni-dra-driver/
 ```
@@ -33,48 +35,66 @@ Inspect network interfaces on worker nodes:
 ```sh
 docker exec -it kind-worker ip -br link show
 docker exec -it kind-worker2 ip -br link show
+docker exec -it kind-worker3 ip -br link show
 ```
 
 Check the ResourceSlices:
 ```sh
 kubectl get resourceslice
-# kind-worker-cni-dra-driver contains the eth0 and eth1 network interfaces.
+# kind-worker-cni-dra-driver contains the eth0 and enp0s10 network interfaces.
 kubectl get resourceslice kind-worker-cni-dra-driver -o yaml
-# kind-worker-cni-dra-driver contains the eth0 network interface.
+# kind-worker-cni-dra-driver contains the eth0 and enp0s10 network interfaces.
 kubectl get resourceslice kind-worker2-cni-dra-driver -o yaml
+# kind-worker-cni-dra-driver contains the eth0 network interface.
+kubectl get resourceslice kind-worker3-cni-dra-driver -o yaml
 ```
 
-Apply the deployment manifest:
+Apply the demo A manifests:
 ```sh
-kubectl apply -f docs/demo/deployment-template.yaml
+kubectl apply -f docs/demo/pod-A.yaml
 ```
 
-Check the ResourceClaimTemplate:
+Apply the demo B manifests:
 ```sh
-# resourceclaimtemplate requesting eth1 to create a macvlan net1 interface on top of it with an IP from the 10.10.1.0/24 subnet.
-kubectl get resourceclaimtemplate macvlan-eth1-attachment -o yaml
+kubectl apply -f docs/demo/deployment-B.yaml
+```
+
+Check the ResourceClaim for Pod-A:
+```sh
+# resourceclaim requesting 10 gbps of enp0s10 to create a macvlan net1 interface on top of it with an IP from the 10.10.1.0/24 subnet.
+kubectl get resourceclaim macvlan-enp0s10-attachment-a -o yaml
+```
+
+Check the ResourceClaimTemplate for Deployment-B:
+```sh
+# resourceclaimtemplate requesting 5 gbps of enp0s10 to create a macvlan net1 interface on top of it with an IP from the 10.10.1.0/24 subnet.
+kubectl get resourceclaimtemplate macvlan-enp0s10-attachment-b -o yaml
+```
+
+Check the pod-a deployment:
+```sh
+# Pod-A pointing to the macvlan-enp0s10-attachment-a resourceclaim.
+kubectl get pod demo-a -o yaml
 ```
 
 Check the demo-application deployment:
 ```sh
-# 15 replicas pointing to the macvlan-eth1-attachment resourceclaimtemplate.
-kubectl get deployment demo-application -o yaml
+# 3 replicas pointing to the macvlan-enp0s10-attachment-b resourceclaimtemplate.
+kubectl get deployment demo-b -o yaml
 ```
 
 List and inspect the ResourceClaims:
 ```sh
-# Check a resourceclaim has been created for the 15 replicas.
+# Check a resourceclaim has been created for the 3 demo-b replicas .
 kubectl get resourceclaim
-RESOURCECLAIM=$(kubectl get resourceclaim --no-headers | awk '{print $1}' | head -n 1)
-# Check the status of the device that has been created for this pod.
-kubectl get resourceclaim -o yaml $RESOURCECLAIM
+# Check the status of the device that has been created for the demo-a pod.
+kubectl get resourceclaim -o yaml macvlan-enp0s10-attachment-a
 ```
 
 Verify that the demo application pods are deployed on node "kind-worker":
 ```sh
-# Check all the demo-application pods have been scheduled on kind-worker.
+# Check all the demo-a and demo-b pods have been scheduled.
 kubectl get pods -o wide
-POD=$(kubectl get pods --no-headers -l app=demo-application | awk '{print $1}' | head -n 1)
 # Check the interface, IP and MAC match the device status in the ResourceClaim.
-kubectl exec -it $POD -- ip a
+kubectl exec -it demo-a -- ip a
 ```

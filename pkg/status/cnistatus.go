@@ -26,7 +26,6 @@ import (
 	resourcev1beta1 "k8s.io/api/resource/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
 )
 
@@ -34,7 +33,7 @@ type CNIStatusHandler struct {
 	ClientSet clientset.Interface
 }
 
-func GetAllocatedDeviceStatusDeviceName(deviceName string, sharedUID *types.UID) string {
+func GetAllocatedDeviceStatusDeviceName(deviceName string, sharedUID *string) string {
 	if sharedUID != nil {
 		return fmt.Sprintf("%s/%s", deviceName, *sharedUID)
 	}

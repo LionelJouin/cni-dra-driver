@@ -1,0 +1,58 @@
+---
+apiVersion: resource.k8s.io/v1beta1
+kind: ResourceClaim
+metadata:
+  name: macvlan-enp0s10-attachment-a
+spec:
+  devices:
+    requests:
+    - name: macvlan-enp0s10
+      deviceClassName: cni.networking.x-k8s.io
+      allocationMode: ExactCount
+      count: 1
+      capacities:
+        requests:
+          bandwidth: 10Gi
+      selectors:
+      - cel:
+          expression: device.driver == "cni.dra.networking.x-k8s.io"
+      - cel:
+          expression: device.attributes["cni.dra.networking.x-k8s.io"].name == "enp0s10"
+    config:
+    - requests:
+      - macvlan-enp0s10
+      opaque:
+        driver: cni.dra.networking.x-k8s.io
+        parameters: # CNIParameters with the GVK, interface name and CNI Config (in YAML format).
+          apiVersion: cni.networking.x-k8s.io/v1alpha1
+          kind: CNI
+          ifName: "net1"
+          config:
+            cniVersion: 1.0.0
+            name: macvlan-enp0s10
+            plugins:
+            - type: macvlan
+              master: enp0s10
+              mode: bridge
+              ipam:
+                type: host-local
+                ranges:
+                - - subnet: 10.10.1.0/24
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-a
+  labels:
+    app: demo-a
+spec:
+  containers:
+  - name: alpine
+    image: alpine:latest
+    imagePullPolicy: IfNotPresent
+    command:
+    - sleep
+    - infinity
+  resourceClaims:
+  - name: macvlan-enp0s10-attachment-a
+    resourceClaimName: macvlan-enp0s10-attachment-a

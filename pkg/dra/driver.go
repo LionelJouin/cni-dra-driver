@@ -45,7 +45,7 @@ type Driver struct {
 	kubeClient       kubernetes.Interface
 	draPlugin        *kubeletplugin.Helper
 	podResourceStore PodResourceStore
-	deviceDiscovery  discovery.DeviceDiscovery
+	deviceDiscovery  *discovery.DeviceDiscovery
 
 	prepareResourcesFailure   error
 	failPrepareResourcesMutex sync.Mutex
@@ -62,7 +62,7 @@ func Start(
 	nodeName string,
 	kubeClient kubernetes.Interface,
 	podResourceStore PodResourceStore,
-	deviceDiscovery discovery.DeviceDiscovery,
+	deviceDiscovery *discovery.DeviceDiscovery,
 	cnirt *cni.Runtime,
 ) (*Driver, error) {
 	d := &Driver{
@@ -88,10 +88,10 @@ func Start(
 		kubeletplugin.DriverName(driverName),
 	)
 
-	resources := deviceDiscovery.GetResources(nodeName)
-	if err := plugin.PublishResources(ctx, resources); err != nil {
-		return nil, err
-	}
+	// resources := deviceDiscovery.GetResources(nodeName)
+	// if err := plugin.PublishResources(ctx, resources); err != nil {
+	// 	return nil, err
+	// }
 
 	if err != nil {
 		return nil, fmt.Errorf("start kubelet plugin: %w", err)
@@ -149,9 +149,9 @@ func (d *Driver) nodePrepareResource(ctx context.Context, claim *resourcev1beta1
 		}
 		devices = append(devices, device)
 	}
-	if err := d.cnirt.UpdateDummyStatus(ctx, claim); err != nil {
-		klog.FromContext(ctx).Error(err, "error updating status")
-	}
+	// if err := d.cnirt.UpdateDummyStatus(ctx, claim); err != nil {
+	// 	klog.FromContext(ctx).Error(err, "error updating status")
+	// }
 
 	klog.FromContext(ctx).Info("nodePrepareResource: Devices for Claim", "claim.UID", claim.UID, "devices", devices)
 

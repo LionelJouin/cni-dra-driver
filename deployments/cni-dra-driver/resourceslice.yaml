@@ -10,15 +10,22 @@ spec:
       attributes:
         name:
           string: "eth0"
-  - name: eth1
+  - name: enp0s10
     basic:
       attributes:
         name:
-          string: "eth1"
+          string: "enp0s10"
+      capacity:
+        bandwidth:
+          claimPolicy:
+            range:
+              minimum: "1"
+          value: 10Gi
+      shared: true
   driver: cni.dra.networking.x-k8s.io
   nodeName: kind-worker
   pool:
-    name: network-interface
+    name: kind-worker
     resourceSliceCount: 1
 ---
 apiVersion: resource.k8s.io/v1beta1
@@ -32,8 +39,37 @@ spec:
       attributes:
         name:
           string: "eth0"
+  - name: enp0s10
+    basic:
+      attributes:
+        name:
+          string: "enp0s10"
+      capacity:
+        bandwidth:
+          claimPolicy:
+            range:
+              minimum: "1"
+          value: 10Gi
+      shared: true
   driver: cni.dra.networking.x-k8s.io
-  nodeName: kind-worke2
+  nodeName: kind-worker2
   pool:
-    name: network-interface
+    name: kind-worker2
+    resourceSliceCount: 1
+---
+apiVersion: resource.k8s.io/v1beta1
+kind: ResourceSlice
+metadata:
+  name: kind-worker3-cni-dra-driver
+spec:
+  devices:
+  - name: eth0
+    basic:
+      attributes:
+        name:
+          string: "eth0"
+  driver: cni.dra.networking.x-k8s.io
+  nodeName: kind-worker3
+  pool:
+    name: kind-worker3
     resourceSliceCount: 1

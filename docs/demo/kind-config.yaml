@@ -5,12 +5,14 @@ featureGates:
   "DynamicResourceAllocation": true
   "DRAResourceClaimDeviceStatus": true
   "DRAAdminAccess": true
+  "DRAConsumableCapacity": true
 runtimeConfig:
   "resource.k8s.io/v1beta1": true
+  "resource.k8s.io/v1beta2": true
 nodes:
 - role: control-plane
-  image: kindest/node:v1.32.2@sha256:f226345927d7e348497136874b6d207e0b32cc52154ad8323129352923a3142f
+  image: ghcr.io/sunya-ch/kindest/node:kep-5075-2a38e52ce37152215fe074eed5762fb01c36e347
 - role: worker
-  image: kindest/node:v1.32.2@sha256:f226345927d7e348497136874b6d207e0b32cc52154ad8323129352923a3142f
+  image: ghcr.io/sunya-ch/kindest/node:kep-5075-2a38e52ce37152215fe074eed5762fb01c36e347
 - role: worker
-  image: kindest/node:v1.32.2@sha256:f226345927d7e348497136874b6d207e0b32cc52154ad8323129352923a3142f
+  image: ghcr.io/sunya-ch/kindest/node:kep-5075-2a38e52ce37152215fe074eed5762fb01c36e347

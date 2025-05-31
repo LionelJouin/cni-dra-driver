@@ -26,7 +26,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/cni-dra-driver/pkg/cni"
-	"sigs.k8s.io/cni-dra-driver/pkg/discovery"
 	"sigs.k8s.io/cni-dra-driver/pkg/dra"
 	"sigs.k8s.io/cni-dra-driver/pkg/nri"
 	"sigs.k8s.io/cni-dra-driver/pkg/status"
@@ -150,16 +149,16 @@ func (ro *runOptions) run(ctx context.Context) {
 	}
 
 	memoryStore := store.NewMemory()
-	config := discovery.Config{
-		NumDevices:                     ro.numDevices,
-		NumSharedDevices:               ro.numSharedDevices,
-		NumSharedDevicesWithConsumable: ro.numSharedDevicesWithConsumable,
-	}
-	deviceDiscovery, err := discovery.NewDeviceDiscovery(config)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to initiate device discovery: %v\n", err)
-		os.Exit(1)
-	}
+	// config := discovery.Config{
+	// 	NumDevices:                     ro.numDevices,
+	// 	NumSharedDevices:               ro.numSharedDevices,
+	// 	NumSharedDevicesWithConsumable: ro.numSharedDevicesWithConsumable,
+	// }
+	// deviceDiscovery, err := discovery.NewDeviceDiscovery(config)
+	// if err != nil {
+	// 	fmt.Fprintf(os.Stderr, "failed to initiate device discovery: %v\n", err)
+	// 	os.Exit(1)
+	// }
 
 	cnish := status.CNIStatusHandler{
 		ClientSet: clientset,
@@ -180,7 +179,7 @@ func (ro *runOptions) run(ctx context.Context) {
 		ro.NodeName,
 		clientset,
 		memoryStore,
-		*deviceDiscovery,
+		nil,
 		cni,
 	)
 	if err != nil {
