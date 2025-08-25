@@ -1,0 +1,142 @@
+# Copyright 2025 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cni-dra-driver-cluster-role
+rules:
+- apiGroups:
+  - ""
+  - resource.k8s.io
+  resources: ["*"]
+  verbs: ["*"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cni-dra-driver-service-account
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cni-dra-driver-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cni-dra-driver-cluster-role
+subjects:
+- kind: ServiceAccount
+  name: cni-dra-driver-service-account
+  namespace: default
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cni-dra-driver
+  labels:
+    app: cni-dra-driver
+spec:
+  selector:
+    matchLabels:
+      app: cni-dra-driver
+  template:
+    metadata:
+      labels:
+        app: cni-dra-driver
+    spec:
+      tolerations:
+      - operator: Exists
+        effect: NoSchedule
+      - operator: Exists
+        effect: NoExecute
+      serviceAccountName: cni-dra-driver-service-account
+      hostNetwork: true
+      hostPID: true
+      initContainers:
+      - name: install-cni-plugins
+        image: alpine
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          cd /tmp
+          wget https://github.com/containernetworking/plugins/releases/download/v1.8.0/cni-plugins-linux-amd64-v1.8.0.tgz
+          cd /opt/cni/bin
+          tar xvfzp /tmp/cni-plugins-linux-amd64-v1.8.0.tgz
+        volumeMounts:
+        - name: cnibin
+          mountPath: /opt/cni/bin
+      containers:
+      - name: cni-dra-driver
+        image: sigs.k8s.io/cni-dra-driver/cni-dra-driver:latest
+        imagePullPolicy: Always
+        command:
+        - ./cni-dra-driver
+        args:
+        - "run"
+        - "--plugin-index=53"
+        - "--node-name=$(NODE_NAME)"
+        - "--verbosity=10"
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: cri-socket
+          mountPath: /var/run/nri/nri.sock
+        - name: cni
+          mountPath: /host/etc/cni/net.d
+        - name: cnibin
+          mountPath: /opt/cni/bin
+        - name: hostroot
+          mountPath: /hostroot
+          mountPropagation: HostToContainer
+        - name: host-run-netns
+          mountPath: /run/netns
+          mountPropagation: HostToContainer
+        - name: host-var-lib-cni-cni-dra-driver
+          mountPath: /var/lib/cni/cni-dra-driver
+        - name: plugins-registry
+          mountPath: /var/lib/kubelet/plugins_registry
+        - name: plugins
+          mountPath: /var/lib/kubelet/plugins
+      volumes:
+      - name: cri-socket
+        hostPath:
+          path: /var/run/nri/nri.sock
+          type: Socket
+      - name: cni
+        hostPath:
+          path: /etc/cni/net.d
+      - name: cnibin
+        hostPath:
+          path: /opt/cni/bin
+      - name: hostroot
+        hostPath:
+          path: /
+      - name: host-run-netns
+        hostPath:
+          path: /run/netns/
+      - name: host-var-lib-cni-cni-dra-driver
+        hostPath:
+          path: /var/lib/cni/cni-dra-driver
+      - name: plugins-registry
+        hostPath:
+          path: /var/lib/kubelet/plugins_registry
+      - name: plugins
+        hostPath:
+          path: /var/lib/kubelet/plugins
