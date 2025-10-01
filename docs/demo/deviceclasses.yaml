@@ -1,0 +1,30 @@
+---
+apiVersion: resource.k8s.io/v1
+kind: DeviceClass
+metadata:
+  # name: macvlan-eth0
+  name: network-interface
+spec:
+  selectors:
+  - cel:
+      expression: device.driver == "cni.dra.networking.x-k8s.io"
+  # - cel:
+  #     expression: device.attributes["cni.dra.networking.x-k8s.io"].name == "eth0"
+  # config:
+  # - opaque:
+  #     driver: cni.dra.networking.x-k8s.io
+  #     parameters: # CNIParameters with the GVK, interface name and CNI Config (in YAML format).
+  #       apiVersion: cni.networking.x-k8s.io/v1alpha1
+  #       kind: CNI
+  #       ifName: "net1"
+  #       config:
+  #         cniVersion: 1.0.0
+  #         name: macvlan-eth0
+  #         plugins:
+  #         - type: macvlan
+  #           master: eth0
+  #           mode: bridge
+  #           ipam:
+  #             type: host-local
+  #             ranges:
+  #             - - subnet: 10.10.1.0/24
