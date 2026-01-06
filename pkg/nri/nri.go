@@ -75,6 +75,11 @@ type Plugin struct {
 func (p *Plugin) RunPodSandbox(ctx context.Context, pod *api.PodSandbox) error {
 	klog.FromContext(ctx).Info("RunPodSandbox", "pod.Name", pod.Name, "pod.Namespace", pod.Namespace)
 
+	claims := p.PodResourceStore.Get(types.UID(pod.Uid))
+	if len(claims) == 0 {
+		return nil
+	}
+
 	podNetworkNamespace := getNetworkNamespace(pod)
 	if podNetworkNamespace == "" {
 		return fmt.Errorf("error getting network namespace for pod '%s' in namespace '%s'", pod.Name, pod.Namespace)

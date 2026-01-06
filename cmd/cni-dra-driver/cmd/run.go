@@ -140,7 +140,8 @@ func (ro *runOptions) run(ctx context.Context) error {
 	memoryStore := store.NewMemory()
 
 	cnish := status.Handler{
-		ClientSet: clientset,
+		ClientSet:  clientset,
+		DriverName: ro.DRADriverName,
 	}
 
 	cniRuntime := cni.New(

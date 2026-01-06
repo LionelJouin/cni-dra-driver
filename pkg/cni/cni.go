@@ -122,12 +122,16 @@ func (rntm *Runtime) AttachNetworks(
 			return claim, err
 		}
 
-		allocatedDeviceStatus, err := buildAllocatedDeviceStatus(&result, cniResult)
-		if err != nil {
-			return claim, err
-		}
+		// Update the claim status with the allocated device information only
+		// if CNI ADD was successful and returned a result (e.g. Valid CNI config with no plugin).
+		if cniResult != nil {
+			allocatedDeviceStatus, err := buildAllocatedDeviceStatus(&result, cniResult)
+			if err != nil {
+				return claim, err
+			}
 
-		addAllocatedDeviceStatusToResourceClaimStatus(claim, *allocatedDeviceStatus)
+			addAllocatedDeviceStatusToResourceClaimStatus(claim, *allocatedDeviceStatus)
+		}
 	}
 
 	return claim, nil

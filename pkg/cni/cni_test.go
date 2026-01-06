@@ -148,7 +148,7 @@ func TestRuntime_AttachNetworks(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:   "valid claim two devices with error during first add",
+			name:   "valid claim two devices with CNI ADD error during first add",
 			fields: fields{DriverName: driverName, CNIConfig: newMockLibCNIConfig()},
 			args: args{
 				ctx:          context.Background(),
@@ -187,7 +187,7 @@ func TestRuntime_AttachNetworks(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:   "valid claim two devices with error during second add",
+			name:   "valid claim two devices with CNI ADD error during second add",
 			fields: fields{DriverName: driverName, CNIConfig: newMockLibCNIConfig()},
 			args: args{
 				ctx:          context.Background(),
@@ -224,6 +224,68 @@ func TestRuntime_AttachNetworks(t *testing.T) {
 				[]resourcev1.AllocatedDeviceStatus{
 					{Driver: requestStatusList[1].Driver, Pool: requestStatusList[1].Pool, Device: requestStatusList[1].Device, ShareID: nil, Data: &requestStatusList[1].allocatedDeviceStatusData, NetworkData: requestStatusList[1].networkData},
 				},
+			),
+			wantErr: true,
+		},
+		{
+			name:   "valid claim single device with no plugins",
+			fields: fields{DriverName: driverName, CNIConfig: newMockLibCNIConfig()},
+			args: args{
+				ctx:          context.Background(),
+				podSandBoxID: "pod-id", podUID: "pod-uid", podName: "pod-name", podNamespace: "pod-namespace", podNetworkNamespace: "pod-net-ns",
+				claim: newResourceClaim(
+					[]resourcev1.DeviceRequestAllocationResult{
+						{Request: requestStatusList[3].Request, Driver: requestStatusList[3].Driver, Pool: requestStatusList[3].Pool, Device: requestStatusList[3].Device, ShareID: requestStatusList[3].ShareID},
+					},
+					[]resourcev1.DeviceAllocationConfiguration{
+						{Requests: []string{requestStatusList[3].Request}, DeviceConfiguration: resourcev1.DeviceConfiguration{Opaque: &resourcev1.OpaqueDeviceConfiguration{
+							Driver: driverName, Parameters: requestStatusList[3].getRequestStatus(),
+						}}},
+					},
+					[]resourcev1.AllocatedDeviceStatus{},
+				),
+			},
+			want: newResourceClaim(
+				[]resourcev1.DeviceRequestAllocationResult{
+					{Request: requestStatusList[3].Request, Driver: requestStatusList[3].Driver, Pool: requestStatusList[3].Pool, Device: requestStatusList[3].Device, ShareID: requestStatusList[3].ShareID},
+				},
+				[]resourcev1.DeviceAllocationConfiguration{
+					{Requests: []string{requestStatusList[3].Request}, DeviceConfiguration: resourcev1.DeviceConfiguration{Opaque: &resourcev1.OpaqueDeviceConfiguration{
+						Driver: driverName, Parameters: requestStatusList[3].getRequestStatus(),
+					}}},
+				},
+				[]resourcev1.AllocatedDeviceStatus{},
+			),
+			wantErr: false,
+		},
+		{
+			name:   "valid claim single device with invalid cni config",
+			fields: fields{DriverName: driverName, CNIConfig: newMockLibCNIConfig()},
+			args: args{
+				ctx:          context.Background(),
+				podSandBoxID: "pod-id", podUID: "pod-uid", podName: "pod-name", podNamespace: "pod-namespace", podNetworkNamespace: "pod-net-ns",
+				claim: newResourceClaim(
+					[]resourcev1.DeviceRequestAllocationResult{
+						{Request: requestStatusList[4].Request, Driver: requestStatusList[4].Driver, Pool: requestStatusList[4].Pool, Device: requestStatusList[4].Device, ShareID: requestStatusList[4].ShareID},
+					},
+					[]resourcev1.DeviceAllocationConfiguration{
+						{Requests: []string{requestStatusList[4].Request}, DeviceConfiguration: resourcev1.DeviceConfiguration{Opaque: &resourcev1.OpaqueDeviceConfiguration{
+							Driver: driverName, Parameters: requestStatusList[4].getRequestStatus(),
+						}}},
+					},
+					[]resourcev1.AllocatedDeviceStatus{},
+				),
+			},
+			want: newResourceClaim(
+				[]resourcev1.DeviceRequestAllocationResult{
+					{Request: requestStatusList[4].Request, Driver: requestStatusList[4].Driver, Pool: requestStatusList[4].Pool, Device: requestStatusList[4].Device, ShareID: requestStatusList[4].ShareID},
+				},
+				[]resourcev1.DeviceAllocationConfiguration{
+					{Requests: []string{requestStatusList[4].Request}, DeviceConfiguration: resourcev1.DeviceConfiguration{Opaque: &resourcev1.OpaqueDeviceConfiguration{
+						Driver: driverName, Parameters: requestStatusList[4].getRequestStatus(),
+					}}},
+				},
+				[]resourcev1.AllocatedDeviceStatus{},
 			),
 			wantErr: true,
 		},
@@ -267,7 +329,7 @@ var requestStatusList = []*requestStatus{
 	{
 		Request: "request-1", Driver: driverName, Pool: "pool-name", Device: "device-1", ShareID: nil,
 		cniConfig: &v1alpha1.CNIConfig{
-			IfName: "net0",
+			IfName: "net1",
 			Config: runtime.RawExtension{Raw: []byte(`{"cniVersion":"1.0.0","name":"macvlan-eth0","plugins":[{"type":"macvlan","master":"eth0","mode":"bridge","ipam":{"type":"host-local","ranges":[[{"subnet":"10.10.1.0/24"}]]}}]}`)},
 		},
 		allocatedDeviceStatusData: runtime.RawExtension{Raw: []byte(`{"cniVersion":"1.0.0","interfaces":[{"mac":"b2:af:6a:f9:12:30","name":"net1","sandbox":"4"}],"ips":[{"address":"10.10.1.2/24","gateway":"10.10.1.1","interface":0}]}`)},
@@ -276,21 +338,39 @@ var requestStatusList = []*requestStatus{
 	{
 		Request: "request-2", Driver: driverName, Pool: "pool-name", Device: "device-2", ShareID: nil,
 		cniConfig: &v1alpha1.CNIConfig{
-			IfName: "net1",
+			IfName: "net2",
 			Config: runtime.RawExtension{Raw: []byte(`{"cniVersion":"1.0.0","name":"macvlan-eth0","plugins":[{"type":"macvlan","master":"eth0","mode":"bridge","ipam":{"type":"host-local","ranges":[[{"subnet":"10.11.1.0/24"}]]}}]}`)},
 		},
-		allocatedDeviceStatusData: runtime.RawExtension{Raw: []byte(`{"cniVersion":"1.0.0","interfaces":[{"mac":"b2:af:6a:f9:12:31","name":"net1","sandbox":"4"}],"ips":[{"address":"10.11.1.2/24","gateway":"10.11.1.1","interface":0}]}`)},
-		networkData:               &resourcev1.NetworkDeviceData{InterfaceName: "net1", IPs: []string{"10.11.1.2/24"}, HardwareAddress: "b2:af:6a:f9:12:31"},
+		allocatedDeviceStatusData: runtime.RawExtension{Raw: []byte(`{"cniVersion":"1.0.0","interfaces":[{"mac":"b2:af:6a:f9:12:31","name":"net2","sandbox":"4"}],"ips":[{"address":"10.11.1.2/24","gateway":"10.11.1.1","interface":0}]}`)},
+		networkData:               &resourcev1.NetworkDeviceData{InterfaceName: "net2", IPs: []string{"10.11.1.2/24"}, HardwareAddress: "b2:af:6a:f9:12:31"},
 	},
 	{
 		Request: "request-3", Driver: driverName, Pool: "pool-name", Device: "device-3", ShareID: nil,
 		cniConfig: &v1alpha1.CNIConfig{
-			IfName: "net2",
+			IfName: "net3",
 			Config: runtime.RawExtension{Raw: []byte(`{"cniVersion":"1.0.0","name":"macvlan-eth0","plugins":[{"type":"macvlan","master":"eth0","mode":"bridge","ipam":{"type":"host-local","ranges":[[{"subnet":"10.12.1.0/24"}]]}}]}`)},
 		},
-		allocatedDeviceStatusData: runtime.RawExtension{Raw: []byte(`{"cniVersion":"1.0.0","interfaces":[{"mac":"b2:af:6a:f9:12:32","name":"net2,"sandbox":"4"}],"ips":[{"address":"10.12.1.2/24","gateway":"10.12.1.1","interface":0}]}`)},
-		networkData:               &resourcev1.NetworkDeviceData{InterfaceName: "net2", IPs: []string{"10.12.1.2/24"}, HardwareAddress: "b2:af:6a:f9:12:32"},
+		allocatedDeviceStatusData: runtime.RawExtension{Raw: []byte(`{"cniVersion":"1.0.0","interfaces":[{"mac":"b2:af:6a:f9:12:32","name":"net3","sandbox":"4"}],"ips":[{"address":"10.12.1.2/24","gateway":"10.12.1.1","interface":0}]}`)},
+		networkData:               &resourcev1.NetworkDeviceData{InterfaceName: "net3", IPs: []string{"10.12.1.2/24"}, HardwareAddress: "b2:af:6a:f9:12:32"},
 		generateErrorOnAdd:        true,
+	},
+	{
+		Request: "request-4", Driver: driverName, Pool: "pool-name", Device: "device-4", ShareID: nil,
+		cniConfig: &v1alpha1.CNIConfig{
+			IfName: "net4",
+			Config: runtime.RawExtension{Raw: []byte(`{"cniVersion":"1.0.0","name":"macvlan-eth0"}`)},
+		},
+		allocatedDeviceStatusData: runtime.RawExtension{Raw: nil},
+		networkData:               nil,
+	},
+	{
+		Request: "request-5", Driver: driverName, Pool: "pool-name", Device: "device-5", ShareID: nil,
+		cniConfig: &v1alpha1.CNIConfig{
+			IfName: "net5",
+			Config: runtime.RawExtension{Raw: []byte(`{a}`)},
+		},
+		allocatedDeviceStatusData: runtime.RawExtension{Raw: nil},
+		networkData:               nil,
 	},
 }
 
@@ -321,6 +401,10 @@ func (mlcc *mockLibCNIConfig) AddNetworkList(ctx context.Context, net *libcni.Ne
 
 	if rs.cniConfig.IfName != rt.IfName {
 		return nil, fmt.Errorf("ifName not match, expected %q, got %q", rs.cniConfig.IfName, rt.IfName)
+	}
+
+	if rs.allocatedDeviceStatusData.Raw == nil {
+		return nil, nil
 	}
 
 	return cni100.NewResult(rs.allocatedDeviceStatusData.Raw)
